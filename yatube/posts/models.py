@@ -32,19 +32,24 @@ class Post(models.Model):
     )
 
     def __str__(self):
-        return self.text
+        return self.text[:15]
 
     class Meta:
         ordering = ['-pub_date']
 
 
 class Group(models.Model):
-    title = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=255, unique=True, db_index=True)
+    title = models.CharField(max_length=200,verbose_name='Название')
+    slug = models.SlugField(
+        max_length=255,
+        unique=True,
+        db_index=True,
+        verbose_name='Уникальный Идентификатор',
+        )
     description = models.TextField(max_length=400)
 
     def __str__(self):
-        return (self.title)
+        return (self.title)[:15]
 
 
 class Comment(models.Model):
@@ -57,11 +62,11 @@ class Comment(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='comments',
-        verbose_name='Автор'
+        verbose_name='Автор',
     )
     text = models.TextField(
         verbose_name='Текст комментария',
-        help_text='Текст нового комментария'
+        help_text='Текст нового комментария',
     )
     created = models.DateTimeField(auto_now_add=True)
 
@@ -72,12 +77,14 @@ class Follow(models.Model):
         on_delete=models.CASCADE,
         null=False,
         blank=False,
-        related_name='follower'
+        related_name='follower',
+        verbose_name='Подписчик',
     )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         null=False,
         blank=False,
-        related_name='following'
+        related_name='following',
+        verbose_name='Автор',
     )

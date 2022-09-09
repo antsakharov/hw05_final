@@ -6,31 +6,23 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .forms import PostForm, CommentForm
 from .models import Group, Post, Comment, Follow, User
 
+def paginate(queryset, request, page_size = settings.PAGE_POSTS):
+    return Paginator(queryset, page_size).get_page(request.GET.get('page'))
 
 def index(request):
     """Функция отображения главной страницы"""
-    post_list = Post.objects.all()
-    paginator = Paginator(post_list, settings.PAGE_POSTS)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    context = {
-        'page_obj': page_obj,
-    }
-    return render(request, 'posts/index.html', context)
+    return render(request, 'posts/index.html', {
+        'page_obj': paginate(Post.objects.all(), request),
+    })
 
 
 def group_posts(request, slug):
     """Функция отображения страницы всех постов группы"""
     group = get_object_or_404(Group, slug=slug)
-    group_list = group.posts.all()
-    paginator = Paginator(group_list, settings.PAGE_POSTS)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    context = {
+    return render(request, 'posts/group_list.html', {
         'group': group,
-        'page_obj': page_obj,
-    }
-    return render(request, 'posts/group_list.html', context)
+        'page_obj': paginate(group.posts.all(), request),
+    })
 
 
 @login_required
@@ -54,8 +46,8 @@ def post_edit(request, post_id):
     """Функция редактирования поста.
     Доступна только авторизованным пользователям"""
     post = get_object_or_404(Post, pk=post_id, author=request.user)
-    if request.method != 'POST':
-        form = PostForm(instance=post)
+    if post.author != request.user:
+        return redirect('posts:post_detail', post_id)
     else:
         form = PostForm(instance=post, data=request.POST)
         if form.is_valid():
@@ -70,38 +62,22 @@ def post_edit(request, post_id):
 
 def profile(request, username):
     """Функция отображения страницы всех постов пользователя"""
-    user = User.objects.get(username=username)
-    posts = Post.objects.filter(author=user)
-    paginator = Paginator(posts, settings.PAGE_POSTS)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    num_post = Post.objects.filter(author=user).count()
+    author = get_object_or_404(User, username=username)
     if request.user.is_authenticated:
-        if Follow.objects.filter(user=request.user, author=user).exists():
-            following = True
-        else:
-            following = False
-    else:
-        following = False
-    context = {
-        'author': user,
-        'page_obj': page_obj,
-        'num_post': num_post,
-        'following': following,
-    }
-    return render(request, 'posts/profile.html', context)
+        Follow.objects.filter(user=request.user, author=author).exists()
+    return render(request, 'posts/profile.html', {
+        'author': author,
+        'page_obj': paginate(author.posts.all(), request, settings.PAGE_POSTS),
+        'following': Follow.objects.all(),
+    })
 
 
 def post_detail(request, post_id):
     """Функция отображения выбранного поста"""
     post = get_object_or_404(Post, pk=post_id)
-    count = Post.objects.filter(author=post.author).count()
-    comments = Comment.objects.filter(post_id=post_id)
     form_comments = CommentForm(request.POST or None)
     context = {
         'post': post,
-        'count': count,
-        'comments': comments,
         'form_comments': form_comments,
     }
     return render(request, 'posts/post_detail.html', context)
@@ -123,41 +99,24 @@ def add_comment(request, post_id):
 @login_required
 def follow_index(request):
     """Отображение страницы подписок"""
-    user = request.user
-    posts = Post.objects.filter(author__following__user=user)
-    paginator = Paginator(posts, settings.PAGE_POSTS)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    context = {
-        'page_obj': page_obj,
-    }
-    return render(request, 'posts/follow.html', context)
+    return render(request, 'posts/follow.html', {
+        'page_obj': paginate(Post.objects.all().filter(
+            author__following__user=request.user), request),
+    })
 
 
 @login_required
 def profile_follow(request, username):
     """Подписаться на автора"""
     author = get_object_or_404(User, username=username)
-    if author == request.user:
-        return redirect(
-            'posts:profile',
-            username=username
-        )
-    follower = Follow.objects.filter(
+    if author != request.user and not author.following.filter(
         user=request.user,
-        author=author
-    ).exists()
-    if follower is True:
-        return redirect(
-            'posts:profile',
-            username=username
+    ).exists():
+        Follow.objects.get_or_create(
+            user=request.user,
+            author=author,
         )
-    Follow.objects.create(user=request.user, author=author)
-    return redirect(
-        'posts:profile',
-        username=username
-    )
-
+    return redirect('posts:profile', username=username)
 
 @login_required
 def profile_unfollow(request, username):

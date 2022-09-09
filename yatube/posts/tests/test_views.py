@@ -3,7 +3,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django import forms
 
-from ..models import Group, Post
+from posts.models import Group, Post
 
 PAGINATOR_TEST_PAGE_1: int = 10
 PAGINATOR_TEST_PAGE_2: int = 3
@@ -24,13 +24,21 @@ class PaginatorViewsTest(TestCase):
             slug='test_slug',
             description='test_description'
         )
+        
+        cls.posts = []
 
         for i in range(PAGINATOR_TEST_ALL_POSTS):
-            cls.post = Post.objects.create(
+            cls.posts.append(
+                Post(
                 text=f'test_text{i}',
                 group=cls.group,
                 author=cls.author
+                )
             )
+
+        Post.objects.bulk_create(cls.posts)
+        
+    
 
         cls.templates = {
             1: reverse('posts:index'),
