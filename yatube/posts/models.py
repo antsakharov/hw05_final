@@ -39,13 +39,13 @@ class Post(models.Model):
 
 
 class Group(models.Model):
-    title = models.CharField(max_length=200,verbose_name='Название')
+    title = models.CharField(max_length=200, verbose_name='Название')
     slug = models.SlugField(
         max_length=255,
         unique=True,
         db_index=True,
         verbose_name='Уникальный Идентификатор',
-        )
+    )
     description = models.TextField(max_length=400)
 
     def __str__(self):

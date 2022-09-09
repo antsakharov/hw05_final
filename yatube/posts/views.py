@@ -4,10 +4,12 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import PostForm, CommentForm
-from .models import Group, Post, Comment, Follow, User
+from .models import Group, Post, Follow, User
 
-def paginate(queryset, request, page_size = settings.PAGE_POSTS):
+
+def paginate(queryset, request, page_size=settings.PAGE_POSTS):
     return Paginator(queryset, page_size).get_page(request.GET.get('page'))
+
 
 def index(request):
     """Функция отображения главной страницы"""
@@ -117,6 +119,7 @@ def profile_follow(request, username):
             author=author,
         )
     return redirect('posts:profile', username=username)
+
 
 @login_required
 def profile_unfollow(request, username):

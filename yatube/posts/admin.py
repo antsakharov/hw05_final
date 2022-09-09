@@ -21,10 +21,12 @@ class PostAdmin(admin.ModelAdmin):
 class GroupAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('title',)}
 
+
 @admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):
     list_display = ('user', 'author', )
     search_fields = ('user',)
+
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
