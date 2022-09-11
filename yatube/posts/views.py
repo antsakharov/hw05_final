@@ -50,11 +50,10 @@ def post_edit(request, post_id):
     post = get_object_or_404(Post, pk=post_id, author=request.user)
     if post.author != request.user:
         return redirect('posts:post_detail', post_id)
-    else:
-        form = PostForm(instance=post, data=request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('posts:post_detail', post_id=post_id)
+    form = PostForm(instance=post, data=request.POST)
+    if form.is_valid():
+        form.save()
+        return redirect('posts:post_detail', post_id=post_id)
     context = {
         'form': form,
         'post': post,
@@ -65,13 +64,17 @@ def post_edit(request, post_id):
 def profile(request, username):
     """Функция отображения страницы всех постов пользователя"""
     author = get_object_or_404(User, username=username)
-    if request.user.is_authenticated:
-        Follow.objects.filter(user=request.user, author=author).exists()
-    return render(request, 'posts/profile.html', {
+    posts = author.posts.select_related('author').all()
+    following = request.user.is_authenticated and Follow.objects.filter(
+        user=request.user,
+        author=author
+    ).exists() 
+    context = {
         'author': author,
-        'page_obj': paginate(author.posts.all(), request, settings.PAGE_POSTS),
-        'following': Follow.objects.all(),
-    })
+        'following': following,
+        'page_obj': paginate(posts, request),
+    }
+    return render(request, 'posts/profile.html', context)
 
 
 def post_detail(request, post_id):
@@ -111,9 +114,7 @@ def follow_index(request):
 def profile_follow(request, username):
     """Подписаться на автора"""
     author = get_object_or_404(User, username=username)
-    if author != request.user and not author.following.filter(
-        user=request.user,
-    ).exists():
+    if author != request.user:
         Follow.objects.get_or_create(
             user=request.user,
             author=author,
